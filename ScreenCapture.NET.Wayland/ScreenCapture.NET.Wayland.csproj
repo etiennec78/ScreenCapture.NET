@@ -67,4 +67,13 @@
     <ProjectReference Include="..\ScreenCapture.NET\ScreenCapture.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+    <PackageReference Include="Tmds.DBus.SourceGenerator" PrivateAssets="all" Version="0.0.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="DBusXml/org.freedesktop.portal.ScreenCast.xml" DBusGeneratorMode="Proxy" />
+  </ItemGroup>
+
 </Project>

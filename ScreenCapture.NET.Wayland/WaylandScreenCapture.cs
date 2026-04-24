@@ -6,7 +6,7 @@ using HPPH;
 namespace ScreenCapture.NET;
 
 /// <summary>
-/// Represents a ScreenCapture using XDG Desktop Portal with Wayland.
+/// Represents a ScreenCapture using XDG Desktop Portal with Wayland over DBus via XDG Desktop Portal.
 /// </summary>
 public sealed class WaylandScreenCapture : AbstractScreenCapture<ColorBGRA>
 {

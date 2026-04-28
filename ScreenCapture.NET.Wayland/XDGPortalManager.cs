@@ -29,6 +29,12 @@ public sealed class XDGPortalManager : IAsyncDisposable {
     Metadata = 4
   }
 
+  private enum RequestResponse : uint {
+    Success = 0,
+    Canceled = 1,
+    Error = 2
+  }
+
   private OrgFreedesktopPortalScreenCastProxy? _screenCast;
   private string? _senderName;
   private Connection? _connection;
@@ -74,11 +80,12 @@ public sealed class XDGPortalManager : IAsyncDisposable {
 
     var (responseCode, results) = await tcs.Task.ConfigureAwait(false);
 
-    if (responseCode == 0) {
-      return results;
-    }
+    if (responseCode == (uint)RequestResponse.Canceled)
+      throw new ScreenCastCanceledException("The user canceled the ScreenCast request.");
+    else if (responseCode == (uint)RequestResponse.Error)
+      throw new ScreenCastException($"{canceledMessage} (code {responseCode}).");
 
-    throw new Exception($"{canceledMessage} (code {responseCode}).");
+    return results;
   }
 
   private string GetToken() {
@@ -204,4 +211,24 @@ public sealed class XDGPortalManager : IAsyncDisposable {
       connection.Dispose();
     }
   }
+}
+
+/// <summary>
+/// Exception raised when the user cancels the ScreenCast session.
+/// </summary>
+public class ScreenCastCanceledException : Exception {
+  /// <summary>
+  /// Exception raised when the user cancels the ScreenCast session.
+  /// </summary>
+  public ScreenCastCanceledException(string message) : base(message) {}
+}
+
+/// <summary>
+/// Exception raised when an error occurs while trying to start a ScreenCast session.
+/// </summary>
+public class ScreenCastException : Exception {
+  /// <summary>
+  /// Exception raised when an error occurs while trying to start a ScreenCast session.
+  /// </summary>
+  public ScreenCastException(string message) : base(message) {}
 }

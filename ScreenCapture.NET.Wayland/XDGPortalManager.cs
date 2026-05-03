@@ -41,13 +41,13 @@ public sealed class XDGPortalManager : IAsyncDisposable {
   private ObjectPath _sessionHandle;
   private int _requestCounter = 0;
   private bool _sourcesSelected = false;
-  private Dictionary<string, VariantValue>? _startResults;
+  private ScreenCastStream? _startResult;
   private bool _isDisposed = false;
 
   /// <summary>
   /// Store portal data after the ScreenCast session has been accepted.
   /// </summary>
-  public IReadOnlyDictionary<string, VariantValue> StartResults => _startResults ?? s_emptyResults;
+  public ScreenCastStream ?StartResults => _startResult;
 
   private async Task<Dictionary<string, VariantValue>> RunRequestAndWaitAsync(
     string expectedReqPath,
@@ -176,11 +176,13 @@ public sealed class XDGPortalManager : IAsyncDisposable {
       { "handle_token", VariantValue.String(startToken) }
     };
 
-    _startResults = await RunRequestAndWaitAsync(
+    Dictionary<string, VariantValue> startResults = await RunRequestAndWaitAsync(
       startReqPath,
       () => _screenCast!.StartAsync(_sessionHandle, parentWindow, startOptions),
       "ScreenCast canceled",
       cancellationToken).ConfigureAwait(false);
+
+    _startResult = ScreenCastStream.ParseSingleResult(startResults);
   }
 
   /// <summary>
@@ -197,7 +199,7 @@ public sealed class XDGPortalManager : IAsyncDisposable {
     _sessionHandle = default;
     _screenCast = null;
     _senderName = null;
-    _startResults = null;
+    _startResult = null;
     _connection = null;
 
     if (connection != null) {
@@ -210,6 +212,36 @@ public sealed class XDGPortalManager : IAsyncDisposable {
       }
       connection.Dispose();
     }
+  }
+}
+
+/// <summary>
+/// An object returned by the XDG Portal after starting the session, containing data related to the video stream.
+/// </summary>
+public record ScreenCastStream(
+  uint NodeId,
+  uint SourceType,
+  string RestoreToken
+) {
+  /// <summary>
+  /// Parse the raw XDG Portal streams list into a <see cref="ScreenCastStream"/> record.
+  /// </summary>
+  public static ScreenCastStream? ParseSingleResult(IDictionary<string, VariantValue> startResults) {
+    if (startResults.TryGetValue("streams", out var streamsObj) && streamsObj is VariantValue streamsVariant) {
+      if (streamsVariant.Count > 0) {
+        VariantValue streamItem = streamsVariant.GetArray<VariantValue>()[0];
+
+        uint nodeId = streamItem.GetItem(0).GetUInt32();
+        var props = streamItem.GetItem(1).GetDictionary<string, VariantValue>();
+
+        uint sourceType = props.TryGetValue("source_type", out var st) ? st.GetUInt32() : 0;
+        string restoreToken = props.TryGetValue("restore_token", out var rt) ? rt.GetString() : "";
+
+        return new ScreenCastStream(nodeId, sourceType, restoreToken);
+      }
+    }
+
+    return null;
   }
 }
 
